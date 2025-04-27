@@ -29,7 +29,7 @@ module.exports = function(app) {
   }
 
   // Endpoint scraper Instagram
-  app.get('/instagram', async (req, res) => {
+  app.get('/igdl', async (req, res) => {
     const { url } = req.query;
 
     if (!url) {
