@@ -1,95 +1,73 @@
 const axios = require('axios');
-const cheerio = require('cheerio');
 
-module.exports = async (req, res) => {
-  const { url } = req.query;
+module.exports = function(app) {
 
-  if (!url) {
-    return res
-      .status(406)
-      .setHeader('Content-Type', 'application/json')
-      .send(JSON.stringify({
-        status: false,
-        creator: 'Kyy',
-        code: 406,
-        message: 'masukkan parameter url'
-      }, null, 2));
+  // Fungsi scraper Instagram
+  async function instagramDownloader(url) {
+    try {
+      const { data } = await axios.get(url, {
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (Linux; Android 10)' // Pakai user-agent mobile
+        }
+      });
+
+      const jsonString = data.match(/<script type="application\/ld\+json">(.+?)<\/script>/);
+
+      if (!jsonString) return null;
+
+      const jsonData = JSON.parse(jsonString[1]);
+      return {
+        title: jsonData.caption || 'No Title',
+        thumbnail: jsonData.thumbnailUrl,
+        video: jsonData.contentUrl,
+        source: 'instagram'
+      };
+    } catch (error) {
+      console.error('Error fetching Instagram:', error.message);
+      return null;
+    }
   }
 
-  try {
-    const { data } = await axios.post(
-      'https://yt1s.io/api/ajaxSearch',
-      new URLSearchParams({
-        q: url,
-        w: '',
-        p: 'home',
-        lang: 'en'
-      }),
-      {
-        headers: {
-          'Accept': 'application/json, text/plain, */*',
-          'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
-          'Origin': 'https://yt1s.io',
-          'Referer': 'https://yt1s.io/',
-          'User-Agent': 'Postify/1.0.0'
-        }
-      }
-    );
+  // Endpoint scraper Instagram
+  app.get('/instagram', async (req, res) => {
+    const { url } = req.query;
 
-    const $ = cheerio.load(data.data);
+    if (!url) {
+      return res.status(400).json({
+        status: false,
+        creator: 'Kyy',
+        code: 400,
+        message: 'Masukkan parameter url.'
+      });
+    }
 
-    const resultArray = $('a.abutton.is-success.is-fullwidth.btn-premium')
-      .map((_, el) => ({
-        url: $(el).attr('href')
-      }))
-      .get();
+    try {
+      const data = await instagramDownloader(url);
 
-    if (resultArray.length < 2) {
-      return res
-        .status(404)
-        .setHeader('Content-Type', 'application/json')
-        .send(JSON.stringify({
+      if (!data) {
+        return res.status(404).json({
           status: false,
           creator: 'Kyy',
           code: 404,
-          message: 'Media tidak ditemukan atau url tidak valid'
-        }, null, 2));
-    }
+          message: 'Gagal mengambil data dari Instagram. Pastikan URL valid.'
+        });
+      }
 
-    const mediaUrl = resultArray[1].url;
-    const head = await axios.head(mediaUrl);
-    const contentType = head.headers['content-type'] || '';
-
-    let type = 'unknown';
-    let result = {};
-
-    if (contentType.includes('video')) {
-      type = 'video';
-      result.video = mediaUrl;
-    } else if (contentType.includes('image')) {
-      type = 'image';
-      result.images = resultArray.slice(1).map(r => r.url);
-    }
-
-    return res
-      .status(200)
-      .setHeader('Content-Type', 'application/json')
-      .send(JSON.stringify({
+      return res.status(200).json({
         status: true,
         creator: 'Kyy',
-        type,
-        result
-      }, null, 2));
+        code: 200,
+        result: data
+      });
 
-  } catch (e) {
-    return res
-      .status(500)
-      .setHeader('Content-Type', 'application/json')
-      .send(JSON.stringify({
+    } catch (error) {
+      return res.status(500).json({
         status: false,
         creator: 'Kyy',
         code: 500,
-        message: `Terjadi kesalahan: ${e.message}`
-      }, null, 2));
-  }
+        message: `Terjadi kesalahan: ${error.message}`
+      });
+    }
+  });
+
 };
