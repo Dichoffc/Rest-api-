@@ -37,7 +37,7 @@ module.exports = function(app) {
   }
 
   // Endpoint untuk download Instagram dari fastdl.app
-  app.get('/igdl', async (req, res) => {
+  app.get('/Instagram', async (req, res) => {
     const { url } = req.query;
     if (!url) {
       return res.status(400).json({ error: 'Parameter URL Instagram wajib diisi.' });
