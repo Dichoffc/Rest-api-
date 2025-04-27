@@ -2,11 +2,10 @@ const axios = require('axios');
 const cheerio = require('cheerio');
 
 module.exports = function(app) {
-
   // Fungsi scraping dari SnapInsta
   async function scrapeSnapInsta(urlInstagram) {
     try {
-      const response = await axios.get(`https://snapinsta.app/download?url=${encodeURIComponent(urlInstagram)}`);
+      const response = await axios.get(`https://snapinsta.to/en/instagram-video-downloader?url=${encodeURIComponent(urlInstagram)}`);
       const $ = cheerio.load(response.data);
 
       const results = [];
@@ -51,5 +50,4 @@ module.exports = function(app) {
       res.status(500).send('Terjadi kesalahan saat mengambil data.');
     }
   });
-
 };
