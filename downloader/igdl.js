@@ -1,24 +1,17 @@
 const axios = require('axios');
 const cheerio = require('cheerio');
-const { setTimeout } = require('timers/promises');
 
 module.exports = function(app) {
-  // Fungsi scraping dari SnapInsta dengan delay
-  async function scrapeSnapInsta(urlInstagram) {
+  // Fungsi scraping dari InstaDownloader
+  async function scrapeInstaDownloader(urlInstagram) {
     try {
-      // Tambahkan delay 2 detik sebelum request untuk menghindari blokir
-      await setTimeout(2000); // delay 2 detik
-
-      const response = await axios.get(`https://snapinsta.to/en/instagram-video-downloader?url=${encodeURIComponent(urlInstagram)}`, {
-        headers: {
-          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
-        }
-      });
-
+      const response = await axios.get(`https://www.instadownloader.co/?url=${encodeURIComponent(urlInstagram)}`);
       const $ = cheerio.load(response.data);
 
       const results = [];
-      $('.download-items__btn').each((index, element) => {
+
+      // Cari link download
+      $('.download-btn').each((index, element) => {
         const downloadLink = $(element).attr('href');
         const type = $(element).text().includes('MP4') ? 'video' : 'image';
 
@@ -32,10 +25,7 @@ module.exports = function(app) {
 
       return results;
     } catch (error) {
-      console.error('Error scraping SnapInsta:', error.message);
-      if (error.response) {
-        console.error('Response error details:', error.response.data);
-      }
+      console.error('Error scraping InstaDownloader:', error.message);
       return [];
     }
   }
@@ -49,7 +39,7 @@ module.exports = function(app) {
     }
 
     try {
-      const data = await scrapeSnapInsta(url);
+      const data = await scrapeInstaDownloader(url);
       if (data.length === 0) {
         return res.status(404).send('Gagal mengambil link download.');
       }
