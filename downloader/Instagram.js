@@ -3,48 +3,46 @@ const cheerio = require('cheerio');
 
 module.exports = function(app) {
 
-  // Fungsi scraper download Instagram dari fastdl.app
-  async function instagramDownloaderFastdl(urlInstagram) {
+  // Fungsi scraper download Instagram dari igram.world
+  async function instagramDownloaderIgram(urlInstagram) {
     try {
-      const response = await axios.post('https://fastdl.app/instagram-downloader', new URLSearchParams({
-        url: urlInstagram
-      }), {
+      const response = await axios.post('https://igram.world/api/ig', {
+        url: urlInstagram,
+        lang: 'en'
+      }, {
         headers: {
-          'Content-Type': 'application/x-www-form-urlencoded'
+          'Content-Type': 'application/json'
         }
       });
 
-      const $ = cheerio.load(response.data);
+      const data = response.data;
 
-      const results = [];
+      if (!data.data || !data.data.medias) {
+        return [];
+      }
 
-      $('.download-items a').each(function () {
-        try {
-          const linkDownload = $(this).attr('href');
-          const type = $(this).find('.download-title').text().trim(); // contoh: "Video", "Image"
-
-          results.push({ type, linkDownload });
-        } catch (e) {
-          console.error('Error scraping download link:', e);
-        }
-      });
+      const results = data.data.medias.map(media => ({
+        type: media.type,        // "image" atau "video"
+        url: media.url,
+        preview: media.preview_url || null
+      }));
 
       return results;
     } catch (error) {
-      console.error('Error fetching download page:', error);
+      console.error('Error fetching download page:', error.message);
       return [];
     }
   }
 
-  // Endpoint untuk download Instagram dari fastdl.app
-  app.get('/Instagram', async (req, res) => {
+  // Endpoint untuk download Instagram dari igram.world
+  app.get('/igdl', async (req, res) => {
     const { url } = req.query;
     if (!url) {
       return res.status(400).json({ error: 'Parameter URL Instagram wajib diisi.' });
     }
 
     try {
-      const data = await instagramDownloaderFastdl(url);
+      const data = await instagramDownloaderIgram(url);
       if (data.length === 0) {
         return res.status(404).json({ message: 'Gagal mengambil link download.' });
       }
