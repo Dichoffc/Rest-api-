@@ -4,10 +4,10 @@ const cheerio = require('cheerio');
 module.exports = function(app) {
 
   // Fungsi scraper download Instagram dari igram.world
-  async function instagramDownloaderIgram(urlInstagram) {
+  async function instagramDownloaderIgram(url) {
     try {
       const response = await axios.post('https://igram.world/api/ig', {
-        url: urlInstagram,
+        url: url,
         lang: 'en'
       }, {
         headers: {
