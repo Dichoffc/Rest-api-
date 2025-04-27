@@ -1,65 +1,57 @@
 const axios = require('axios');
-const cheerio = require('cheerio');
 
 module.exports = function(app) {
-  // Fungsi scraping dari Downloadgram
-  async function scrapeDownloadgram(urlInstagram) {
+
+  // Fungsi scraper Instagram
+  async function instagramDownloader(url) {
     try {
-      const response = await axios.get(`https://downloadgram.org/?url=${encodeURIComponent(urlInstagram)}`);
-      const $ = cheerio.load(response.data);
-
-      const results = [];
-
-      // Cari link download
-      $('a.btn-download').each((index, element) => {
-        const downloadLink = $(element).attr('href');
-        const type = $(element).text().includes('MP4') ? 'video' : 'image';
-
-        if (downloadLink) {
-          results.push({
-            type,
-            url: downloadLink
-          });
+      const { data } = await axios.get(url, {
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (Linux; Android 10)', // Pakai user-agent mobile
         }
       });
 
-      return results;
+      const jsonString = data.match(/<script type="application\/ld\+json">(.+?)<\/script>/);
+
+      if (!jsonString) {
+        console.error('Tidak bisa menemukan media.');
+        return null;
+      }
+
+      const jsonData = JSON.parse(jsonString[1]);
+      return {
+        title: jsonData.caption || 'No Title',
+        thumbnail: jsonData.thumbnailUrl,
+        video: jsonData.contentUrl,
+        source: 'instagram'
+      };
     } catch (error) {
-      console.error('Error scraping Downloadgram:', error.message);
-      return [];
+      console.error('Error fetching Instagram:', error);
+      return null;
     }
   }
 
-  // Validasi URL Instagram
-  function isValidInstagramUrl(url) {
-    const regex = /^(https?:\/\/(?:www\.)?instagram\.com\/(?:p|tv|reel)\/[A-Za-z0-9-_]+)/;
-    return regex.test(url);
-  }
-
-  // Endpoint untuk download
+  // Endpoint untuk scraper Instagram
   app.get('/igdl', async (req, res) => {
     const { url } = req.query;
-
     if (!url) {
-      return res.status(400).send('Masukkan parameter URL.');
-    }
-
-    if (!isValidInstagramUrl(url)) {
-      return res.status(400).send('URL Instagram tidak valid.');
+      return res.status(400).json({ message: 'Parameter url tidak ditemukan.' });
     }
 
     try {
-      const data = await scrapeDownloadgram(url);
-      if (data.length === 0) {
-        return res.status(404).send('Gagal mengambil link download.');
+      const data = await instagramDownloader(url);
+      if (!data) {
+        return res.status(404).json({ message: 'Gagal mengambil data dari Instagram.' });
       }
 
-      // Kalau berhasil, langsung tampilkan link download pertama
-      res.redirect(data[0].url);
-
+      res.status(200).json({
+        status: 200,
+        creator: "Lenwy",
+        data: data
+      });
     } catch (error) {
-      console.error(error);
-      res.status(500).send('Terjadi kesalahan saat mengambil data.');
+      res.status(500).json({ error: 'Terjadi kesalahan saat mengambil data Instagram.' });
     }
   });
+
 };
