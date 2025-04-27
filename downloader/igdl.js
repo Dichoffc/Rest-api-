@@ -1,59 +1,71 @@
 const axios = require('axios');
+const cheerio = require('cheerio');
 
 module.exports = function(app) {
 
-  // Fungsi download dari igram.world
-  async function instagramDownloaderIgram(linkInstagram) {
+  // Fungsi scraping saveig.app
+  async function scrapeSaveIg(instagramUrl) {
     try {
-      const response = await axios.post('https://igram.world/api/ig', {
-        url: linkInstagram,
+      // Kirim POST ke saveig.app
+      const response = await axios.post('https://saveig.app/api/ajaxSearch', new URLSearchParams({
+        q: instagramUrl,
         lang: 'en'
-      }, {
+      }), {
         headers: {
-          'Content-Type': 'application/json'
+          'content-type': 'application/x-www-form-urlencoded; charset=UTF-8',
+          'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)',
+          'x-requested-with': 'XMLHttpRequest'
         }
       });
 
-      const data = response.data;
+      const $ = cheerio.load(response.data.data); // mereka balikin HTML di field 'data'
 
-      if (!data.data || !data.data.medias) {
-        return [];
-      }
+      const results = [];
+      $('.download-items__btn').each((i, elem) => {
+        const link = $(elem).attr('href');
+        const type = $(elem).text().includes('Download Video') ? 'video' : 'image';
 
-      const results = data.data.medias.map(media => ({
-        type: media.type,        // "image" atau "video"
-        url: media.url,
-        preview: media.preview_url || null
-      }));
+        if (link) {
+          results.push({
+            type,
+            url: link
+          });
+        }
+      });
 
       return results;
+
     } catch (error) {
-      console.error('Error fetching download page:', error.message);
+      console.error('Error scraping SaveIG:', error.message);
       return [];
     }
   }
 
-  // Endpoint untuk download IG
+  // Endpoint
   app.get('/igdl', async (req, res) => {
-    const { url } = req.query;  // Pakai url sekarang
+    const { url } = req.query;
 
     if (!url) {
-      return res.status(400).json({ error: 'Parameter url wajib diisi.' });
+      return res.status(400).send('Masukkan parameter url.');
     }
 
     try {
-      const data = await instagramDownloaderIgram(url);
+      const data = await scrapeSaveIg(url);
       if (data.length === 0) {
-        return res.status(404).json({ message: 'Gagal mengambil link download.' });
+        return res.status(404).send('Gagal mengambil link download.');
       }
 
-      res.status(200).json({
-        status: 200,
-        creator: "Dibikinin sama ChatGPT Bre",
-        data: data
-      });
+      // Kalau mau langsung redirect file pertama:
+      return res.redirect(data[0].url);
+
+      // Atau kalau mau tampilkan linknya:
+      /*
+      return res.send(`<a href="${data[0].url}" target="_blank">Klik untuk download ${data[0].type}</a>`);
+      */
+      
     } catch (error) {
-      res.status(500).json({ error: 'Terjadi kesalahan saat mengambil data.' });
+      console.error(error);
+      res.status(500).send('Terjadi kesalahan saat mengambil data.');
     }
   });
 
