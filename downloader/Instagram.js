@@ -1,46 +1,62 @@
 const axios = require('axios');
-const express = require('express');
-const app = express();
+const cheerio = require('cheerio');
 
-async function downloadInstagramVideo(url) {
-  try {
-    // Menggunakan API pihak ketiga untuk mendownload video Instagram
-    const apiUrl = `https://api.savinsta.app/api/instagram?url=${encodeURIComponent(url)}`;
-    const response = await axios.get(apiUrl);
+module.exports = function(app) {
 
-    if (response.data && response.data.status === 'success') {
-      return response.data.data.video_url; // URL video yang bisa diunduh
-    } else {
-      throw new Error('Tidak bisa menemukan video.');
+  // Fungsi scraper download Instagram dari fastdl.app
+  async function instagramDownloaderFastdl(urlInstagram) {
+    try {
+      const response = await axios.post('https://fastdl.app/instagram-downloader', new URLSearchParams({
+        url: urlInstagram
+      }), {
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded'
+        }
+      });
+
+      const $ = cheerio.load(response.data);
+
+      const results = [];
+
+      $('.download-items a').each(function () {
+        try {
+          const linkDownload = $(this).attr('href');
+          const type = $(this).find('.download-title').text().trim(); // contoh: "Video", "Image"
+
+          results.push({ type, linkDownload });
+        } catch (e) {
+          console.error('Error scraping download link:', e);
+        }
+      });
+
+      return results;
+    } catch (error) {
+      console.error('Error fetching download page:', error);
+      return [];
     }
-  } catch (error) {
-    console.error('Error downloading Instagram video:', error.message);
-    return null;
   }
-}
 
-app.get('/Instagram', async (req, res) => {
-  const { url } = req.query;
-  if (!url) {
-    return res.status(400).json({ error: 'URL parameter is required' });
-  }
-  
-  try {
-    const videoUrl = await downloadInstagramVideo(url);
-    if (videoUrl) {
+  // Endpoint untuk download Instagram dari fastdl.app
+  app.get('/igdl', async (req, res) => {
+    const { url } = req.query;
+    if (!url) {
+      return res.status(400).json({ error: 'Parameter URL Instagram wajib diisi.' });
+    }
+
+    try {
+      const data = await instagramDownloaderFastdl(url);
+      if (data.length === 0) {
+        return res.status(404).json({ message: 'Gagal mengambil link download.' });
+      }
+
       res.status(200).json({
         status: 200,
-        video_url: videoUrl
+        creator: "Dibikinin sama ChatGPT Bre",
+        data: data
       });
-    } else {
-      res.status(404).json({ error: 'Video not found' });
+    } catch (error) {
+      res.status(500).json({ error: 'Terjadi kesalahan saat mengambil data.' });
     }
-  } catch (error) {
-    res.status(500).json({ error: 'Error fetching Instagram video' });
-  }
-});
+  });
 
-const port = 3000;
-app.listen(port, () => {
-  console.log(`Server running on http://localhost:${port}`);
-});
+};
