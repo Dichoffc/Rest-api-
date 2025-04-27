@@ -23,7 +23,7 @@ require('./ai/Thinkai')(app);
 require('./berita/liputan6')(app);
 
 // Import Download 
-require('./downloader/Instagram')(app);
+require('./downloader/igdl')(app);
 
 // Import Search
 require('./search/goodread')(app);
