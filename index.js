@@ -22,6 +22,9 @@ require('./ai/Thinkai')(app);
 // Import Berita
 require('./berita/liputan6')(app);
 
+// Import Download 
+require('/downloader/Instagram')(app);
+
 // Import Search
 require('./search/goodread')(app);
 require('./search/ypia')(app);
