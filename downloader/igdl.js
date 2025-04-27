@@ -1,34 +1,63 @@
 const axios = require('axios');
+const cheerio = require('cheerio');
 
 module.exports = function(app) {
 
-  // Fungsi scraper Instagram
-  async function instagramDownloader(url) {
+  // Fungsi scraper Instagram baru
+  async function instagramDownloaderV2(url) {
     try {
       const { data } = await axios.get(url, {
         headers: {
-          'User-Agent': 'Mozilla/5.0 (Linux; Android 10)' // Pakai user-agent mobile
+          'User-Agent': 'Mozilla/5.0 (Linux; Android 10)' // User-Agent mobile
         }
       });
 
-      const jsonString = data.match(/<script type="application\/ld\+json">(.+?)<\/script>/);
+      const $ = cheerio.load(data);
+      const script = $('script[type="application/ld+json"]').html();
 
-      if (!jsonString) return null;
+      if (!script) return null;
 
-      const jsonData = JSON.parse(jsonString[1]);
+      const jsonData = JSON.parse(script);
+
+      let media = [];
+
+      if (jsonData.hasOwnProperty('image') && jsonData.hasOwnProperty('video')) {
+        // Kalau ada image & video (contoh reels)
+        media.push({
+          type: 'video',
+          url: jsonData.video.contentUrl
+        });
+      } else if (jsonData.hasOwnProperty('image')) {
+        // Kalau hanya gambar (post biasa)
+        if (Array.isArray(jsonData.image)) {
+          jsonData.image.forEach(img => {
+            media.push({
+              type: 'image',
+              url: img
+            });
+          });
+        } else {
+          media.push({
+            type: 'image',
+            url: jsonData.image
+          });
+        }
+      }
+
       return {
         title: jsonData.caption || 'No Title',
-        thumbnail: jsonData.thumbnailUrl,
-        video: jsonData.contentUrl,
+        thumbnail: jsonData.thumbnailUrl || (media[0] ? media[0].url : null),
+        medias: media,
         source: 'instagram'
       };
+
     } catch (error) {
       console.error('Error fetching Instagram:', error.message);
       return null;
     }
   }
 
-  // Endpoint scraper Instagram
+  // Endpoint baru untuk Instagram Downloader PRO
   app.get('/igdl', async (req, res) => {
     const { url } = req.query;
 
@@ -42,7 +71,7 @@ module.exports = function(app) {
     }
 
     try {
-      const data = await instagramDownloader(url);
+      const data = await instagramDownloaderV2(url);
 
       if (!data) {
         return res.status(404).json({
