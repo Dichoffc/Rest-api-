@@ -1,13 +1,12 @@
 const axios = require('axios');
-const cheerio = require('cheerio');
 
 module.exports = function(app) {
 
-  // Fungsi scraper download Instagram dari igram.world
-  async function instagramDownloaderIgram(url) {
+  // Fungsi download dari igram.world
+  async function instagramDownloaderIgram(linkInstagram) {
     try {
       const response = await axios.post('https://igram.world/api/ig', {
-        url: url,
+        url: linkInstagram,
         lang: 'en'
       }, {
         headers: {
@@ -34,11 +33,12 @@ module.exports = function(app) {
     }
   }
 
-  // Endpoint untuk download Instagram dari igram.world
+  // Endpoint untuk download IG
   app.get('/igdl', async (req, res) => {
-    const { url } = req.query;
+    const { url } = req.query;  // Pakai url sekarang
+
     if (!url) {
-      return res.status(400).json({ error: 'Parameter URL Instagram wajib diisi.' });
+      return res.status(400).json({ error: 'Parameter url wajib diisi.' });
     }
 
     try {
