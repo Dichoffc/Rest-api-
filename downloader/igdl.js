@@ -30,12 +30,22 @@ module.exports = function(app) {
     }
   }
 
-  // Endpoint
+  // Validasi URL Instagram
+  function isValidInstagramUrl(url) {
+    const regex = /^(https?:\/\/(?:www\.)?instagram\.com\/(?:p|tv|reel)\/[A-Za-z0-9-_]+)/;
+    return regex.test(url);
+  }
+
+  // Endpoint untuk download
   app.get('/igdl', async (req, res) => {
     const { url } = req.query;
 
     if (!url) {
-      return res.status(400).send('Masukkan parameter url.');
+      return res.status(400).send('Masukkan parameter URL.');
+    }
+
+    if (!isValidInstagramUrl(url)) {
+      return res.status(400).send('URL Instagram tidak valid.');
     }
 
     try {
