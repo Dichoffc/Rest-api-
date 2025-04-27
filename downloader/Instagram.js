@@ -19,7 +19,7 @@ async function downloadInstagramVideo(url) {
   }
 }
 
-app.get('/downloadInstagram', async (req, res) => {
+app.get('/Instagram', async (req, res) => {
   const { url } = req.query;
   if (!url) {
     return res.status(400).json({ error: 'URL parameter is required' });
