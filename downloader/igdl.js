@@ -2,16 +2,16 @@ const axios = require('axios');
 const cheerio = require('cheerio');
 
 module.exports = function(app) {
-  // Fungsi scraping dari InstaDownloader
-  async function scrapeInstaDownloader(urlInstagram) {
+  // Fungsi scraping dari Downloadgram
+  async function scrapeDownloadgram(urlInstagram) {
     try {
-      const response = await axios.get(`https://www.instadownloader.co/?url=${encodeURIComponent(urlInstagram)}`);
+      const response = await axios.get(`https://downloadgram.org/?url=${encodeURIComponent(urlInstagram)}`);
       const $ = cheerio.load(response.data);
 
       const results = [];
 
       // Cari link download
-      $('.download-btn').each((index, element) => {
+      $('a.btn-download').each((index, element) => {
         const downloadLink = $(element).attr('href');
         const type = $(element).text().includes('MP4') ? 'video' : 'image';
 
@@ -25,7 +25,7 @@ module.exports = function(app) {
 
       return results;
     } catch (error) {
-      console.error('Error scraping InstaDownloader:', error.message);
+      console.error('Error scraping Downloadgram:', error.message);
       return [];
     }
   }
@@ -39,7 +39,7 @@ module.exports = function(app) {
     }
 
     try {
-      const data = await scrapeInstaDownloader(url);
+      const data = await scrapeDownloadgram(url);
       if (data.length === 0) {
         return res.status(404).send('Gagal mengambil link download.');
       }
